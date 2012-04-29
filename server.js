@@ -11,24 +11,31 @@ var geo= new Schema({
      lat: Number
     ,lon: Number
     ,cap: Number
+    ,count: Number
+    ,type: String
 })
+var interests=[0,0,0,0,0];
 mongoose.connect('mongodb://localhost/milkplease');
-var geoModel = mongoose.model('geo', geo);
+var geoModel = mongoose.model('geos', geo);
 
-var reader = csv.createCsvFileReader('members_list_4.4.csv');
+geoModel.update({},{count:0},{multi:true},function(err,data){});
+
 
 var dati=[];
 var j=0;
 var MailChimp=require('mailchimp');
-var MailChimpExportAPI = MailChimp.MailChimpExportAPI;
 var MailChimpWebhook = MailChimp.MailChimpWebhook;
-var webhook = new MailChimpWebhook();
+
+var MailChimpExportAPI = MailChimp.MailChimpExportAPI;
+
+
 
 
 var apiKey = 'ad35e8926f0c786cc82e302c3134f786-us4';
-
+var webhook = new MailChimpWebhook(apiKey,{port:8100, secure:false});
 try {
     var exportApi = new MailChimpExportAPI(apiKey, { version : '1.0', secure: false });
+
 } catch (error) {
     console.log('Error: ' + error);
 }
@@ -41,6 +48,27 @@ exportApi.list({ id : '2091439f7f'  }, function (data) {
 
 
         while(data[i]!=null){
+            if(data[i][3]!=null)    {
+
+
+
+                     if( data[i][3].indexOf("Poter ricevere la spesa rimanendo a casa.")!=-1)
+                         interests[0]++;
+
+                     if( data[i][3].indexOf("Guadagnare facendo piccole consegne per altri utenti.")!=-1)
+                         interests[1]++;
+
+                     if( data[i][3].indexOf("Voglio offrire il servizio di Milk")!=-1)
+                         interests[2]++;
+
+                     if( data[i][3].indexOf("Pubblicizzare i miei prodotti tramite suggerimenti sponsorizzati.")!=-1)
+                         interests[3]++;
+
+                     if( data[i][3].indexOf("Sono curioso")!=-1)
+                         interests[4]++;
+
+
+                 }
 
             if(data[i][1]!=null && data[i][1]!=""){
 
@@ -56,6 +84,7 @@ exportApi.list({ id : '2091439f7f'  }, function (data) {
 
 });
 
+
 function populate(j){
 
             if(j<dati.length)
@@ -65,17 +94,19 @@ function populate(j){
 
                         var geoInstance= new geoModel();
                         geoInstance.cap=dati[j];
-                        geoInstance.save(function(err,docs){
 
-                            populate(++j);});
+
+                        geoInstance.save(function(err,docs){});
+
 
 
                     }
                     else{
 
-                        populate(++j);
-                    }
 
+
+                    }
+                    populate(++j);
 
                 });
             else
@@ -83,14 +114,24 @@ function populate(j){
                     gohead();
 }
 
+webhook.on('error', function (message) {
+    console.log('Error: '+message);
+});
+
 webhook.on('subscribe', function (data, meta) {
+    console.log(data.mail+"/SUB");
     console.log(data+"/SUB");
+
     if(data[1]=""){
         dati[j]=data[1];
         populate(j);
         j++;
     }
 });
+webhook.on('unsubscribe', function (data, meta) {
+    console.log(data.email+' unsubscribed from your newsletter!'); // Do something with your data!
+});
+
 /*reader.addListener('data', function(data) {
     var i=0;
     while(data[i]!=null ){
@@ -146,7 +187,7 @@ function soc(){
      if(!socdone){
             io.sockets.on('connection', function (socket) {
                 var p=0;
-
+                socket.emit('interests',interests);
                 while(p<cord.length){
 
                     socket.emit('cord', cord[p]);
@@ -157,11 +198,10 @@ function soc(){
             });
      }
     else{
-         io.sockets.emit('cord', { will: cord[cord.length-2]});
+         io.sockets.emit('cord',  cord[cord.length-1]);
      }
 
 }
-
 function find(x){
     geoModel.findOne({'cap':dati[x]},function (err,doc){
 
@@ -173,7 +213,9 @@ function find(x){
        }
         else{
 
-           cord[ci]=[[doc.lat],[doc.lon]];
+           doc.count=doc.count+1;
+           doc.save();
+           cord[ci]=[doc.lat,doc.lon,doc.count ];
 
            ci++;
            gohead();
@@ -185,7 +227,7 @@ function code(x){
     var lat1="";
     var lon1="";
 
-
+    console.log(dati.length);
     if(x<dati.length){
 
 
@@ -200,18 +242,20 @@ function code(x){
                 else if(obj.results[0]!=null){
                     lat1=obj.results[0].geometry.location.lat;
                     lon1=obj.results[0].geometry.location.lng;
-                    cord[ci]=[[lat1],[lon1]];
 
-                    ci++;
-                    var conditions = { cap: dati[x]}
-                        , update = { $set:{lat:lat1,lon:lon1 }}
-                        , options = { multi: true };
-                    geoModel.update(conditions,update,options,callback);
-                    function callback (err, numAffected) {
-                        if(err!=null)
-                            console.log(err);
-                    };
-                        gohead();
+                        cord[ci]=[lat1,lon1];
+
+                        ci++;
+                        var conditions = { cap: dati[x]}
+                            , update = { $set:{lat:lat1,lon:lon1,count:1 }}
+                            , options = { multi: true };
+                        geoModel.update(conditions,update,options,callback);
+                        function callback (err, numAffected) {
+                            if(err!=null)
+                                console.log(err);
+                        };
+                            gohead();
+
                 }
 
 
