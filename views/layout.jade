@@ -5,8 +5,8 @@ html(lang="en")
     style(type="text/css")
             html { height: 100% }
             body { height: 100%; margin: 0; padding: 0 }
-
-
+    title Milkplease utenti
+    link(rel="icon",type="image/png",href="img/favico.png")
 
     script(type="text/javascript",src='jquery-1.7.min.js')
     script(type="text/javascript",src='/js/highcharts.js')
@@ -17,16 +17,26 @@ html(lang="en")
     script
         var lat="";
         var lon="";
-        var indexcord=0;
+        var indexcord=1;
         var neighborhoods=[];
 
         var socket = io.connect();
-        socket.on('cord', function (cord) {
-            initialize(indexcord,cord);
-            indexcord++;
+
+        socket.on('nUtenti',function(nUt){
+
+           $('#ut').html('#Utenti: '+ nUt);
         });
         socket.on('interests',function(interests){
 
+
+                            initializeMap();
+                            iterator = 0;
+
+
+            socket.on('cord', function (cord) {
+                        initialize(indexcord,cord);
+                        indexcord++;
+                    });
             console.log(interests);
 
 
@@ -115,14 +125,10 @@ html(lang="en")
         function initialize (i,cord){
 
             neighborhoods[i] = cord ;
-            if(i==0){
 
-                initializeMap();
-                iterator = 0;
-            }
-            else{
+
               drop(i);
-            }
+
         }
 
         function addMarker(i) {
@@ -130,19 +136,25 @@ html(lang="en")
             if(neighborhoods[i][2]<2) {
                     icon="img/marker2_s.png";
 
+                markers.push(new google.maps.Marker({
+                    position: new google.maps.LatLng(neighborhoods[i][0],neighborhoods[i][1]),
+                    map: map,
+                    draggable: false,
+                    animation: google.maps.Animation.DROP,
+                    icon: icon,
+                    zIndex:-1
+                }));
+
             }
 
             else{
                 icon="img/marker2.png";
+                for(z in markers)
+                    if(markers[z].getPosition().equals(new google.maps.LatLng(neighborhoods[i][0],neighborhoods[i][1])))
+                        markers[z].setIcon(icon) ;
 
             }
-            markers.push(new google.maps.Marker({
-                position: new google.maps.LatLng(neighborhoods[i][0],neighborhoods[i][1]),
-                map: map,
-                draggable: false,
-                animation: google.maps.Animation.DROP,
-                icon: icon
-            }));
+
 
         }
 
@@ -193,6 +205,31 @@ html(lang="en")
                                            });
 
                                 });
+             $('#nUtenti').bind("mouseenter",function() {
+
+                                                 done=false;
+                                               $('#nUtenti').stop().animate({
+
+                                                 opacity: '1',
+
+                                               }, 1000, function() {
+                                                 // Animation complete.
+                                               });
+
+                                             }).bind("mouseleave",function(){
+
+                                                      $('#nUtenti').stop().animate({
+
+
+
+                                                          opacity: '0.5',
+
+                                                        }, 1000, function() {
+
+                                                        });
+
+                                             });
+
 
         });
 
@@ -208,7 +245,9 @@ html(lang="en")
 
             #map_canvas(style="position:absolute;width:100%;height:100%;z-index:0")
             #wrap(style="position:relative;float:right;z-index:50;")
-                #container(style="position:relative;float:right;z-index:40;width:350px;height:350px;margin-top:30px; opacity:0.3", onmouseover="", onmouseout="")
-
+                #container(style="position:relative;float:right;z-index:40;width:350px;height:350px;margin-top:30px; opacity:0.3")
+            #footer(style="position:absolute;bottom:0px;width:100%;height:100px")
+                #nUtenti(style="margin-top:10px;width:132px;height:50px;position:relative;float:right;bottom:0px;right:112px;z-index:50;cursor:pointer;background-image:url('img/vimeo.png'); opacity:0.3")
+                    span#ut(style="position:relative;top:8px;left:3px; font-size:23px; font-family: sans-serif;color:#33ccff ")
 
 

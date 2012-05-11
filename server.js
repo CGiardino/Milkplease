@@ -8,17 +8,17 @@ var mongoose = require('mongoose')
     , Schema = mongoose.Schema
     , ObjectId = mongoose.SchemaTypes.ObjectId;
 var geo= new Schema({
-     lat: Number
+    lat: Number
     ,lon: Number
     ,cap: Number
     ,count: Number
     ,type: String
 })
-var interests=[0,0,0,0,0];
+var interests;
 mongoose.connect('mongodb://localhost/milkplease');
 var geoModel = mongoose.model('geos', geo);
 
-geoModel.update({},{count:0},{multi:true},function(err,data){});
+
 
 
 var dati=[];
@@ -39,113 +39,116 @@ try {
 } catch (error) {
     console.log('Error: ' + error);
 }
+var nUt=0;
+function readList(){
+    nUt=0;
+    j=0;
+    interests=[0,0,0,0,0];
+    geoModel.update({},{count:0},{multi:true},function(err,data){});
+    exportApi.list({ id : '2091439f7f'  }, function (data) {
 
-exportApi.list({ id : '2091439f7f'  }, function (data) {
-    if (data.error)
-        console.log('Error: '+data.error+' ('+data.code+')');
-    else{
-        var i=1;
-
-
-        while(data[i]!=null){
-            if(data[i][3]!=null)    {
-
-
-
-                     if( data[i][3].indexOf("Poter ricevere la spesa rimanendo a casa.")!=-1)
-                         interests[0]++;
-
-                     if( data[i][3].indexOf("Guadagnare facendo piccole consegne per altri utenti.")!=-1)
-                         interests[1]++;
-
-                     if( data[i][3].indexOf("Voglio offrire il servizio di Milk")!=-1)
-                         interests[2]++;
-
-                     if( data[i][3].indexOf("Pubblicizzare i miei prodotti tramite suggerimenti sponsorizzati.")!=-1)
-                         interests[3]++;
-
-                     if( data[i][3].indexOf("Sono curioso")!=-1)
-                         interests[4]++;
+        if (data.error)
+            console.log('Error: '+data.error+' ('+data.code+')');
+        else{
+            var i=1;
 
 
-                 }
+            while(data[i]!=null){
+                nUt++;
+                if(data[i][3]!=null)    {
 
-            if(data[i][1]!=null && data[i][1]!=""){
 
-                dati[j]=data[i][1];
 
-                j++;
+                    if( data[i][3].indexOf("Poter ricevere la spesa rimanendo a casa.")!=-1)
+                        interests[0]++;
 
+                    if( data[i][3].indexOf("Guadagnare facendo piccole consegne per altri utenti.")!=-1)
+                        interests[1]++;
+
+                    if( data[i][3].indexOf("Voglio offrire il servizio di Milk")!=-1)
+                        interests[2]++;
+
+                    if( data[i][3].indexOf("Pubblicizzare i miei prodotti tramite suggerimenti sponsorizzati.")!=-1)
+                        interests[3]++;
+
+                    if( data[i][3].indexOf("Sono curioso")!=-1)
+                        interests[4]++;
+
+
+                }
+
+                if(data[i][1]!=null && data[i][1]!=""){
+
+                    dati[j]=data[i][1];
+
+                    j++;
+
+                }
+                i++;
             }
-            i++;
+            populate(0);
         }
-        populate(0);
-    }
 
-});
-
-
+    });
+}
+readList();
 function populate(j){
 
-            if(j<dati.length)
-                geoModel.findOne({'cap':dati[j]},function (err,doc){
+    if(j<dati.length)
+        geoModel.findOne({'cap':dati[j]},function (err,doc){
 
-                    if(doc==null){
+            if(doc==null){
 
-                        var geoInstance= new geoModel();
-                        geoInstance.cap=dati[j];
-
-
-                        geoInstance.save(function(err,docs){});
+                var geoInstance= new geoModel();
+                geoInstance.cap=dati[j];
 
 
-
-                    }
-                    else{
+                geoInstance.save(function(err,docs){});
 
 
 
-                    }
-                    populate(++j);
+            }
+            else{
 
-                });
-            else
 
-                    gohead();
+
+            }
+            populate(++j);
+
+        });
+    else
+
+        gohead();
 }
 
 webhook.on('error', function (message) {
     console.log('Error: '+message);
 });
 
-webhook.on('subscribe', function (data, meta) {
-    console.log(data.mail+"/SUB");
-    console.log(data+"/SUB");
+webhook.on('subscribe', function (data) {
 
-    if(data[1]=""){
-        dati[j]=data[1];
-        populate(j);
-        j++;
-    }
+
+    readList();
+    console.log("ecco"+data);
 });
 webhook.on('unsubscribe', function (data, meta) {
-    console.log(data.email+' unsubscribed from your newsletter!'); // Do something with your data!
+    readList();
 });
 
 /*reader.addListener('data', function(data) {
-    var i=0;
-    while(data[i]!=null ){
-        if(i==1 && data[i]!=""){
-            dati[j]=data[i];
-            j++;
+ var i=0;
+ while(data[i]!=null ){
+ if(i==1 && data[i]!=""){
+ dati[j]=data[i];
+ j++;
 
-        }
+ }
 
-        i++;
+ i++;
 
-    }
-});
-reader.addListener('end',gohead);
+ }
+ });
+ reader.addListener('end',gohead);
  */
 
 var app = express.createServer(
@@ -184,42 +187,45 @@ function gohead(){
 
 function soc(){
 
-     if(!socdone){
-            io.sockets.on('connection', function (socket) {
-                var p=0;
-                socket.emit('interests',interests);
-                while(p<cord.length){
+    if(!socdone){
 
-                    socket.emit('cord', cord[p]);
+        io.sockets.on('connection', function (socket) {
+            var p=0;
 
-                    p++;
-                }
-                socdone=true;
-            });
-     }
+            socket.emit('interests',interests);
+            while(p<cord.length){
+
+                socket.emit('cord', cord[p]);
+
+                p++;
+            }
+            socdone=true;
+            socket.emit('nUtenti',nUt);
+        });
+    }
     else{
-         io.sockets.emit('cord',  cord[cord.length-1]);
-     }
+        io.sockets.emit('cord',  cord[cord.length-1]);
+    }
 
 }
 function find(x){
     geoModel.findOne({'cap':dati[x]},function (err,doc){
 
-       if(doc==null ||doc.lat==null){
+        if(doc==null ||doc.lat==null){
 
 
-           code(x);
+            code(x);
 
-       }
+        }
         else{
 
-           doc.count=doc.count+1;
-           doc.save();
-           cord[ci]=[doc.lat,doc.lon,doc.count ];
+            doc.count=doc.count+1;
+            doc.save();
+            cord[ci]=[doc.lat,doc.lon,doc.count ];
 
-           ci++;
-           gohead();
-       }
+            ci++;
+            gohead();
+        }
     });
 }
 function code(x){
@@ -228,38 +234,39 @@ function code(x){
     var lon1="";
 
     console.log(dati.length);
+
     if(x<dati.length){
 
 
-            geocoder.geocode(dati[x]+"+Italy",function ( err, data ){
-                var obj= JSON.parse(JSON.stringify(data));
+        geocoder.geocode(dati[x]+"+Italy",function ( err, data ){
+            var obj= JSON.parse(JSON.stringify(data));
 
-                if(obj.status=="OVER_QUERY_LIMIT"){
-                    console.log(JSON.stringify("OVER_QUERY_LIMIT"));
+            if(obj.status=="OVER_QUERY_LIMIT"){
+                console.log(JSON.stringify("OVER_QUERY_LIMIT"));
 
-                    soc();
-                }
-                else if(obj.results[0]!=null){
-                    lat1=obj.results[0].geometry.location.lat;
-                    lon1=obj.results[0].geometry.location.lng;
+                soc();
+            }
+            else if(obj.results[0]!=null){
+                lat1=obj.results[0].geometry.location.lat;
+                lon1=obj.results[0].geometry.location.lng;
 
-                        cord[ci]=[lat1,lon1];
+                cord[ci]=[lat1,lon1];
 
-                        ci++;
-                        var conditions = { cap: dati[x]}
-                            , update = { $set:{lat:lat1,lon:lon1,count:1 }}
-                            , options = { multi: true };
-                        geoModel.update(conditions,update,options,callback);
-                        function callback (err, numAffected) {
-                            if(err!=null)
-                                console.log(err);
-                        };
-                            gohead();
+                ci++;
+                var conditions = { cap: dati[x]}
+                    , update = { $set:{lat:lat1,lon:lon1,count:1 }}
+                    , options = { multi: true };
+                geoModel.update(conditions,update,options,callback);
+                function callback (err, numAffected) {
+                    if(err!=null)
+                        console.log(err);
+                };
+                gohead();
 
-                }
+            }
 
 
-            });
+        });
 
 
 
