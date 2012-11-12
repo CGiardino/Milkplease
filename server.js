@@ -31,7 +31,7 @@ var MailChimpExportAPI = MailChimp.MailChimpExportAPI;
 
 
 
-var apiKey = 'ad35e8926f0c786cc82e302c3134f786-us4';
+var apiKey = 'insert here your api';
 var webhook = new MailChimpWebhook(apiKey,{port:8100, secure:false});
 try {
     var exportApi = new MailChimpExportAPI(apiKey, { version : '1.0', secure: false });
