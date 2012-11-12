@@ -45,7 +45,7 @@ function readList(){
     j=0;
     interests=[0,0,0,0,0];
     geoModel.update({},{count:0},{multi:true},function(err,data){});
-    exportApi.list({ id : '2091439f7f'  }, function (data) {
+    exportApi.list({ id : 'insert id'  }, function (data) {
 
         if (data.error)
             console.log('Error: '+data.error+' ('+data.code+')');
@@ -155,7 +155,7 @@ var app = express.createServer(
     express.bodyParser()
     , express.static(__dirname + "/public")
     , express.cookieParser()
-    , express.session({ secret:'desrever'})
+    , express.session({ secret:'insert pwd'})
 ),io = io.listen(app);
 io.set('log level', 1);
 
